@@ -40,6 +40,7 @@ htmlcov/
 !*.tfvars.example
 crash.log
 .terraform.lock.hcl.bak
+terraform/build/
 
 # --- AWS ----------------------------------------------------------------
 .aws/
