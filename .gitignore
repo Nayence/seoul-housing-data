@@ -1,0 +1,65 @@
+# --- Donnees collectees -------------------------------------------------
+# Volumineuses, regenerables par le collecteur, et vouees a grossir.
+# Git n'est pas un entrepot de donnees : leur place est dans S3.
+data/
+*.jsonl
+*.json.gz
+
+# --- Secrets ------------------------------------------------------------
+# La cle API vit dans l'environnement, jamais dans le depot.
+# Un secret pousse sur un depot public est aspire en quelques minutes,
+# et le retirer ensuite ne sert a rien : il faut le revoquer.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials
+secrets.yaml
+
+# --- Python -------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Terraform (etape suivante du projet) -------------------------------
+# L'etat Terraform contient des valeurs sensibles et ne se versionne pas
+# dans Git : il ira dans un bucket S3 dedie, avec verrouillage.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+.terraform.lock.hcl.bak
+
+# --- AWS ----------------------------------------------------------------
+.aws/
+*.retry
+
+# --- Node / front (etape ulterieure) ------------------------------------
+node_modules/
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+.cache/
+
+# --- Editeurs et systeme ------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*~
