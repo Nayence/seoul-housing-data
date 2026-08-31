@@ -28,8 +28,8 @@ data "aws_iam_policy_document" "collector" {
   # Journalisation. Restreinte au groupe de logs de cette fonction, pas a
   # l'ensemble des logs du compte.
   statement {
-    sid     = "Logs"
-    actions = ["logs:CreateLogStream", "logs:PutLogEvents"]
+    sid       = "Logs"
+    actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
     resources = ["${aws_cloudwatch_log_group.collector.arn}:*"]
   }
 
@@ -44,8 +44,8 @@ data "aws_iam_policy_document" "collector" {
 
   # Lecture de la cle API. Un seul parametre nomme, pas le chemin entier.
   statement {
-    sid       = "ReadApiKey"
-    actions   = ["ssm:GetParameter"]
+    sid     = "ReadApiKey"
+    actions = ["ssm:GetParameter"]
     resources = [
       "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${var.api_key_parameter}"
     ]

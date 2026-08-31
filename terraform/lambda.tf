@@ -39,7 +39,7 @@ resource "aws_lambda_function" "collector" {
   runtime       = "python3.13"
   architectures = ["arm64"] # ~20 % moins cher que x86 a performance egale
 
-  filename         = data.archive_file.lambda.output_path
+  filename = data.archive_file.lambda.output_path
   # Force le redeploiement quand le code change. Sans ce hash, Terraform ne
   # verrait aucune difference et ne redeploierait jamais.
   source_code_hash = data.archive_file.lambda.output_base64sha256
