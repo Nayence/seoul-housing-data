@@ -99,10 +99,16 @@ h1 {
 }
 
 button:focus-visible,
-tr:focus-visible {
+tbody td a:focus-visible {
   outline: 2px solid var(--slate);
   outline-offset: 2px;
 }
+
+/* --- Fil d'ariane des fiches arrondissement ----------------------------- */
+
+.back-link { margin: 0 0 28px; font-size: 14px; }
+.back-link a { color: var(--celadon); text-decoration: none; }
+.back-link a:hover, .back-link a:focus-visible { text-decoration: underline; }
 
 /* --- Tableau de classement ---------------------------------------------- */
 
@@ -126,7 +132,7 @@ thead th {
 
 thead th:first-child { text-align: left; }
 
-tbody tr { border-bottom: 1px solid var(--rule); cursor: pointer; }
+tbody tr { border-bottom: 1px solid var(--rule); }
 tbody tr:hover { background: var(--celadon-pale); }
 tbody tr[aria-selected="true"] { background: var(--celadon-pale); }
 
@@ -137,6 +143,9 @@ tbody td {
 }
 
 tbody td:first-child { text-align: left; font-weight: 500; }
+
+tbody td a { color: inherit; text-decoration: none; }
+tbody td a:hover { text-decoration: underline; }
 
 .korean { color: var(--ink-faint); font-weight: 400; margin-left: 8px; }
 
@@ -166,12 +175,23 @@ tbody td:first-child { text-align: left; font-weight: 500; }
   letter-spacing: -0.015em;
 }
 
+.detail h2 .korean { font-size: 16px; }
+
 .detail h3 {
   margin: 40px 0 12px;
   font-size: 15px;
   font-weight: 500;
   color: var(--ink-soft);
 }
+
+.detail h4 {
+  margin: 24px 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+
+.detail h4:first-of-type { margin-top: 4px; }
 
 .grid {
   display: grid;

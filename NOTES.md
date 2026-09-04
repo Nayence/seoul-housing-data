@@ -347,6 +347,61 @@ l'exécution. Source classique de faux diagnostics.
 
 ---
 
+## 15 — Le contenu qui n'existait que pour un moteur JavaScript
+
+**Symptôme.** Le site fonctionnait, au sens où un navigateur affichait les
+chiffres. Mais un robot d'indexation ou un aperçu de lien (Slack, iMessage,
+Twitter) ne voit que le HTML brut, avant toute exécution de script. Or ce HTML
+brut était un `<tbody id="ranking">` vide et un « Chargement des données… ».
+Zéro nom d'arrondissement, zéro prix, zéro contenu indexable.
+
+**Contexte.** Le référencement met six à douze mois à démarrer et le partage
+de liens est le principal canal d'acquisition avant que Google prenne le
+relais. Un site tout-JavaScript perd ce temps-là intégralement : il n'y a rien
+à rattraper après coup, seulement des semaines qu'on ne récupère pas.
+
+**Correctif.** `src/render.py`, nouveau module, prend en entree le meme
+dictionnaire d'agregats que `transform.assemble()` produit deja pour le JSON,
+et en derive du HTML complet : la page d'accueil (classement rendu pour un
+segment par defaut) et une fiche statique par arrondissement
+(`/arrondissement/{slug}.html`, 25 pages). Le JavaScript (`site/app.js`) reste
+charge sur ces pages, mais il **enrichit** ce balisage — tri interactif,
+changement de segment — au lieu de le creer. Un lecteur sans JavaScript, ou un
+robot, voit deja tout le contenu utile.
+
+**Consequence architecturale.** `index.html` cesse d'etre un fichier statique
+du depot : il est genere a chaque execution de la transformation, exactement
+comme `districts.json`. `site/` ne contient plus que ce qui est vraiment
+statique — `app.js`, `styles.css`, `404.html`. Deployer le site redevient donc
+deux gestes distincts : `aws s3 sync site/` pour le squelette, invoquer la
+Lambda de transformation pour que le contenu existe.
+
+**Piege evite.** Si `index.html` etait reste dans `site/`, un `aws s3 sync
+site/ --delete` l'aurait ecrase par l'ancienne coquille vide au deploiement
+suivant — un site qui « marche » en apparence, mais qui redevient invisible
+aux robots sans qu'aucune erreur ne le signale. Exactement le genre de bug
+silencieux que l'entree 5 met en garde contre. La parade n'est pas une regle
+a retenir, c'est structurelle : le fichier dangereux n'est simplement plus
+dans le dossier synchronise.
+
+**Choix d'URL.** Le CloudFront de ce projet sert le bucket via OAC, en origine
+S3 generique — pas le point de terminaison "site web statique" de S3, qui seul
+resout `/repertoire/` vers `index.html` automatiquement. Sans Lambda@Edge ni
+CloudFront Function, une URL "propre" sans extension necessiterait cette
+machinerie en plus. Choix retenu : `/arrondissement/{slug}.html` en fichier
+plat, ou `{slug}` est le nom francophone en minuscules (`gangnam-gu`,
+`mapo-gu`...). Zero infrastructure supplementaire, et l'extension `.html` ne
+coute rien au referencement.
+
+**Segment par defaut, pas hardcode.** Chaque fiche met en avant le type de
+logement le plus represente localement (calcule depuis les memes agregats),
+pas un segment fixe. Raison directe : l'entree 10 documentait un facteur 36
+sur le nombre d'officetels selon l'arrondissement. Afficher par defaut un
+segment quasi absent localement aurait ete a la fois inutile et malhonnete
+pour la fiche la moins pourvue.
+
+---
+
 ## Points ouverts
 
 - **Taux de conversion légal** (`CONVERSION_RATE_ANNUAL`) — encadré par la loi

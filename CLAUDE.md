@@ -84,13 +84,14 @@ Trois buckets aux rôles distincts :
 src/          code Python : collecte et transformation
   seoul_housing.py       bibliothèque de collecte
   transform.py           agrégats, médianes, ban-jeonse
+  render.py              pages HTML pré-rendues (accueil + par arrondissement)
   cli.py                 collecte en local
-  cli_transform.py       transformation en local
+  cli_transform.py       transformation + rendu en local
   handler_collector.py   Lambda de collecte (SQS)
   handler_scheduler.py   Lambda de planification (EventBridge)
   handler_transformer.py Lambda de transformation (EventBridge)
 terraform/    infrastructure complète
-site/         front statique : index.html, app.js, styles.css, 404.html
+site/         front vraiment statique : app.js, styles.css, 404.html
 data/         données locales, ignorées par Git
 ```
 
@@ -102,14 +103,16 @@ data/         données locales, ignorées par Git
 - Transformation : médianes par segment, séries temporelles, classification
   ban-jeonse contextuelle, 27 fichiers d'agrégats
 - CloudFront devant un bucket fermé, accès par OAC uniquement
-- Première version du site statique
+- Site : accueil + une fiche statique par arrondissement, contenu déjà rendu
+  en HTML par `src/render.py` (JavaScript en enrichissement, pas en création) ;
+  balises Open Graph / Twitter Card et canonique sur toutes les pages —
+  voir NOTES.md entrée 15
 
 **Suivant, dans l'ordre**
-1. Itérations sur le site, responsive, lisibilité
-2. Pages statiques par arrondissement pour le référencement
-3. Déploiement GitHub Actions en OIDC
-4. Collecte quotidienne du taux EUR/KRW depuis la BCE
-5. Observabilité : tableau de bord, alarmes, détection de dérive de schéma
+1. Itérations visuelles sur le site, responsive, lisibilité, accessibilité
+2. Déploiement GitHub Actions en OIDC
+3. Collecte quotidienne du taux EUR/KRW depuis la BCE
+4. Observabilité : tableau de bord, alarmes, détection de dérive de schéma
 
 ## Environnement
 
@@ -130,11 +133,15 @@ cd src && python3 cli_transform.py --verbose
 # infrastructure
 cd terraform && terraform plan -out=tfplan && terraform apply tfplan
 
-# déploiement du site
+# déploiement du site : deux gestes distincts, dans n'importe quel ordre
+# 1. le squelette vraiment statique (app.js, styles.css, 404.html)
 aws s3 sync site/ s3://seoul-housing-site-anice/ --exclude "data/*"
+# 2. le contenu (index.html, arrondissement/*.html, data/*.json) : voir
+#    "invocation manuelle" ci-dessous — index.html n'est PAS dans site/,
+#    il est genere par la Lambda a chaque transformation (NOTES.md entree 15)
 aws cloudfront create-invalidation --distribution-id <id> --paths "/*"
 
-# invocation manuelle
+# invocation manuelle (regenere aussi index.html et les fiches par arrondissement)
 aws lambda invoke --function-name seoul-housing-transformer \
   --cli-read-timeout 0 --cli-binary-format raw-in-base64-out \
   --payload '{}' --region ap-northeast-2 /dev/null
