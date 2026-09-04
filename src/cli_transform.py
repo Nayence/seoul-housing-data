@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
 Lance la transformation en local, sur les donnees rapatriees depuis S3.
+Ecrit aussi les pages HTML (accueil + une par arrondissement), pour les
+relire dans un navigateur avant de deployer.
 
     aws s3 sync s3://seoul-housing-raw-anice/normalized/ ./data/normalized/
     python3 cli_transform.py --input ../data/normalized --out ../data/site
@@ -15,6 +17,7 @@ import logging
 import sys
 from pathlib import Path
 
+import render
 from transform import transform
 
 
@@ -60,6 +63,7 @@ def main():
     print(f"{file_count} fichiers a lire (deux passes)...")
 
     outputs = transform(lambda: stream_records(args.input))
+    pages = render.render_all_pages(outputs)
 
     out_dir = Path(args.out)
     for relative_path, content in outputs.items():
@@ -69,9 +73,15 @@ def main():
             json.dumps(content, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+    for relative_path, content in pages.items():
+        target = out_dir / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
 
-    total_size = sum((out_dir / p).stat().st_size for p in outputs)
-    print(f"\n{len(outputs)} fichiers ecrits ({total_size / 1024:.0f} Ko)")
+    all_files = {**outputs, **pages}
+    total_size = sum((out_dir / p).stat().st_size for p in all_files)
+    print(f"\n{len(all_files)} fichiers ecrits ({total_size / 1024:.0f} Ko), "
+          f"dont {len(pages)} pages HTML")
     print(f"-> {out_dir}")
 
     meta = outputs["meta.json"]

@@ -46,6 +46,20 @@ data "aws_iam_policy_document" "transformer" {
     actions   = ["s3:PutObject"]
     resources = ["${aws_s3_bucket.site.arn}/data/*"]
   }
+
+  # Ecriture des pages HTML pre-rendues (accueil + une par arrondissement),
+  # a la racine du bucket : c'est la que CloudFront les attend, le prefixe
+  # data/ n'est lu que par le JavaScript du site. Deux ressources plutot
+  # qu'un joker large sur tout le bucket, pour ne pas pouvoir ecraser
+  # app.js/styles.css/404.html, qui ne sont pas du ressort de cette Lambda.
+  statement {
+    sid     = "WritePages"
+    actions = ["s3:PutObject"]
+    resources = [
+      "${aws_s3_bucket.site.arn}/index.html",
+      "${aws_s3_bucket.site.arn}/arrondissement/*",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "transformer" {

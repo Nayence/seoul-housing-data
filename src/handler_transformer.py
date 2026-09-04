@@ -1,8 +1,11 @@
 """
 Lambda de transformation. Declenchee par EventBridge, apres la collecte.
 
-Lit la couche brute depuis S3, calcule les agregats, et ecrit les fichiers
-JSON servis par le site.
+Lit la couche brute depuis S3, calcule les agregats, et ecrit :
+  - les fichiers JSON consommes par le JavaScript du site, sous data/
+  - les pages HTML pretes a l'indexation (accueil + une par arrondissement),
+    a la racine du bucket, generees par render.py a partir de ces memes
+    agregats
 
 Rapport de compression typique : 1,27 million de transactions (~800 Mo)
 condensees en ~3 Mo de fichiers prets a l'emploi. C'est tout l'interet du
@@ -17,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import boto3
 
+import render
 from transform import transform
 
 log = logging.getLogger()
@@ -77,22 +81,26 @@ def stream_records(keys):
                 yield from records
 
 
-def write_outputs(outputs):
-    """Ecrit les fichiers d'agregats dans le bucket du site."""
+def write_outputs(outputs, prefix, content_type, is_json):
+    """Ecrit un lot de fichiers dans le bucket du site, sous un prefixe donne."""
     for relative_path, content in outputs.items():
-        key = SITE_PREFIX + relative_path
+        key = prefix + relative_path
+        body = (
+            json.dumps(content, ensure_ascii=False).encode("utf-8") if is_json
+            else content.encode("utf-8")
+        )
         s3.put_object(
             Bucket=SITE_BUCKET,
             Key=key,
-            Body=json.dumps(content, ensure_ascii=False).encode("utf-8"),
-            ContentType="application/json; charset=utf-8",
+            Body=body,
+            ContentType=content_type,
             # Les donnees ne changent qu'une fois par mois. Une heure de
             # cache navigateur est prudente : le CDN sera invalide au
             # deploiement, ce qui rend la fraicheur immediate cote CDN.
             CacheControl="public, max-age=3600",
         )
-    log.info("%d fichiers ecrits dans s3://%s/%s",
-             len(outputs), SITE_BUCKET, SITE_PREFIX)
+    log.info("%d fichiers ecrits dans s3://%s/%s (%s)",
+             len(outputs), SITE_BUCKET, prefix, content_type)
 
 
 def handler(event, context):
@@ -107,13 +115,20 @@ def handler(event, context):
     # deja cree ne fonctionnerait pas — il s'epuise apres un parcours.
     outputs = transform(lambda: stream_records(keys))
 
-    write_outputs(outputs)
+    # Les pages HTML sont derivees des memes agregats, pas recalculees : le
+    # contenu servi au navigateur et celui servi aux robots viennent d'une
+    # seule passe de transformation, ils ne peuvent pas diverger.
+    pages = render.render_all_pages(outputs)
+
+    write_outputs(outputs, SITE_PREFIX, "application/json; charset=utf-8", is_json=True)
+    write_outputs(pages, "", "text/html; charset=utf-8", is_json=False)
 
     meta = outputs["meta.json"]
     summary = {
         "event": "transformed",
         "source_files": len(keys),
-        "output_files": len(outputs),
+        "data_files": len(outputs),
+        "page_files": len(pages),
         "months": len(meta["months_covered"]),
         "period": f"{meta['months_covered'][0]}-{meta['months_covered'][-1]}",
         "districts": meta["district_count"],

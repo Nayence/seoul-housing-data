@@ -48,6 +48,28 @@ AREA_BUCKETS = [
     ("tres_grand", 85, 9999),
 ]
 
+# Noms francophones des arrondissements, pour l'affichage sur le site.
+# L'API ne renvoie que le nom coreen (sigungu_name) : ce dictionnaire est la
+# seule source du nom francophone, il n'existe nulle part ailleurs. Forme
+# alignee sur Wikipedia francophone ("Jongno-gu", "Jung-gu"...) : le suffixe
+# -gu est conserve car plusieurs noms courts (Jung, Guro) sont ambigus ou
+# se lisent comme un mot francais une fois isoles.
+DISTRICT_NAMES_FR = {
+    "11110": "Jongno-gu",       "11140": "Jung-gu",
+    "11170": "Yongsan-gu",      "11200": "Seongdong-gu",
+    "11215": "Gwangjin-gu",     "11230": "Dongdaemun-gu",
+    "11260": "Jungnang-gu",     "11290": "Seongbuk-gu",
+    "11305": "Gangbuk-gu",      "11320": "Dobong-gu",
+    "11350": "Nowon-gu",        "11380": "Eunpyeong-gu",
+    "11410": "Seodaemun-gu",    "11440": "Mapo-gu",
+    "11470": "Yangcheon-gu",    "11500": "Gangseo-gu",
+    "11530": "Guro-gu",         "11545": "Geumcheon-gu",
+    "11560": "Yeongdeungpo-gu", "11590": "Dongjak-gu",
+    "11620": "Gwanak-gu",       "11650": "Seocho-gu",
+    "11680": "Gangnam-gu",      "11710": "Songpa-gu",
+    "11740": "Gangdong-gu",
+}
+
 # Seuil de classification ban-jeonse : un depot superieur a cette fraction
 # du jeonse median comparable, assorti d'un loyer mensuel.
 #
@@ -274,11 +296,18 @@ def assemble(district_names, months, provisional,
                 continue
             stats = distribution(values)
             if not stats.get("insufficient"):
-                prices.setdefault(property_type, {})[bucket] = stats["median"]
+                # count voyage avec median : le site a besoin des deux pour
+                # la colonne "Transactions" du classement, et distribution()
+                # le calcule deja - il ne restait qu'a le transmettre.
+                prices.setdefault(property_type, {})[bucket] = {
+                    "median": stats["median"],
+                    "count": stats["count"],
+                }
 
         overview.append({
             "code": district,
             "name": name,
+            "name_fr": DISTRICT_NAMES_FR.get(district, name),
             "median_by_type_area": prices,
         })
 
@@ -355,6 +384,7 @@ def assemble(district_names, months, provisional,
             "generated_at": generated_at,
             "code": district,
             "name": name,
+            "name_fr": DISTRICT_NAMES_FR.get(district, name),
             "timeseries": timeseries,
             "timeseries_by_segment": segmented,
             "breakdown": breakdown,
