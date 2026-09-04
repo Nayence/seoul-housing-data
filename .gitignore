@@ -64,3 +64,4 @@ Thumbs.db
 !.vscode/extensions.json
 *.swp
 *~terraform/tfplan
+terraform/tfplan
